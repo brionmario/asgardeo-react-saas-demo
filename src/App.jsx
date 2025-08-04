@@ -1,26 +1,43 @@
+import { useState } from 'react'
 import { SignedIn, SignedOut, SignInButton, useAsgardeo, User, UserDropdown } from '@asgardeo/react'
 import TokenInfo from './TokenInfo'
 import './App.css'
 import { useEffect } from 'react';
 
 function App() {
-  const { signInSilently } = useAsgardeo();
+  const { signInSilently, getDecodedIdToken, isSignedIn } = useAsgardeo();
+  
+  const [decodedIdToken, setDecodedIdToken] = useState(null);
   
   const urlParams = new URLSearchParams(window.location.search);
   const orgIdFromUrl = urlParams.get('orgId');
   
   useEffect(() => {
-    signInSilently({ fidp: "OrganizationSSO", orgId: orgIdFromUrl })
-      .then((response) => {
+    (async () => {
+      try {
+        const response = await signInSilently({ fidp: "OrganizationSSO", orgId: orgIdFromUrl });
+        
         if (response === true) {
           return;
         }
-      })
-      .catch((error) => {
-        console.error('Silent sign-in failed:', error);
-      });
+
+        console.debug('No session found...');
+      } catch(error) {
+        console.error('Error during silent sign-in:', error);
+      }
+    })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    (async () => {
+      if (isSignedIn) {
+        const response = await getDecodedIdToken();
+        
+        setDecodedIdToken(response);
+      }
+    })();
+  }, [getDecodedIdToken, isSignedIn]);
 
   return (
     <>
@@ -29,7 +46,7 @@ function App() {
           <UserDropdown menuItems={[
             {
               label: 'My Account',
-              onClick: () => window.open(`https://myaccount.asgardeo.io/t/dxlab/${orgIdFromUrl}`, '_blank')
+              onClick: () => window.open(`${import.meta.env.VITE_ASGARDEO_MYACCOUNT_URL}/${decodedIdToken?.org_id}`, '_blank')
             }
           ]} />
         </SignedIn>
