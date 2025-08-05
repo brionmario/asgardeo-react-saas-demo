@@ -5,7 +5,7 @@ import './App.css'
 import { useEffect } from 'react';
 
 function App() {
-  const { signInSilently, getDecodedIdToken, isSignedIn } = useAsgardeo();
+  const { signInSilently, getDecodedIdToken, isSignedIn, signIn } = useAsgardeo();
   
   const [decodedIdToken, setDecodedIdToken] = useState(null);
   
@@ -15,13 +15,26 @@ function App() {
   useEffect(() => {
     (async () => {
       try {
-        const response = await signInSilently({ fidp: "OrganizationSSO", orgId: orgIdFromUrl });
+        const params = {};
         
+        if (orgIdFromUrl) {
+          params.fidp = "OrganizationSSO";
+          params.orgId = orgIdFromUrl;
+        }
+
+        const response = await signInSilently(params);
+
         if (response === true) {
           return;
         }
 
         console.debug('No session found...');
+        
+        if (orgIdFromUrl) {
+          console.debug('Organization ID is present in URL. Redirecting to sign-in with Organization SSO...');
+
+          await signIn(params);
+        }
       } catch(error) {
         console.error('Error during silent sign-in:', error);
       }
